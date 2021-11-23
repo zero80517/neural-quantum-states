@@ -1,0 +1,9 @@
+Output of training: 
+- date_time.nqs
+- date_time.log
+
+date_time.nqs:
+{"name of the hamiltonian":{"parameter_1":...,...},"NQS":{"parameter_1":...,...},"samples":(2D list)}
+
+date_time.log:
+{"name of the sampler":{"parameter_1":...,...},"name of the optimizer":{"parameter_1":...,...},"training":[{"sampler results":{"result_1":...,...},"optimizer results":{"result_1":...,...},"iteration":...},...]}

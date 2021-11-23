@@ -1,0 +1,129 @@
+% Используются листы формата А4, односторонняя печать, чистовая версия с кеглем 14 пунктов для отчета 
+\documentclass[a4paper, oneside, final, 14pt]{extreport}
+
+% дальше идет непонятная дичь, которая делает крутое оглавление со всеми точками и циферками
+\usepackage{titlesec}
+\usepackage{tocbasic}
+
+\titleformat{\section}
+{\large\bfseries}{\thesection}{1em}{}
+\titleformat{\subsection}
+{\large\bfseries}{\thesubsection}{1em}{}
+
+\DeclareTOCStyleEntry[
+    linefill=\bfseries\TOCLineLeaderFill,beforeskip=2pt,entrynumberformat=\chapterprefixintoc,dynnumwidth
+]{tocline}{chapter}
+\newcommand\chapterprefixintoc[1]{#1~}% <- added
+
+\titleformat{\chapter}[hang]{\centering\huge\bfseries}{\thechapter}{1em}{}
+\titlespacing*{\chapter}{0pt}{-3em}{2em}
+\titlelabel{\thetitle\quad}
+\renewcommand{\thechapter}{Глава \arabic{chapter}.}
+\renewcommand{\thesection}{\arabic{chapter}.\arabic{section}}
+\renewcommand{\theequation}{\arabic{chapter}.\arabic{equation}}
+\renewcommand{\thetable}{\arabic{chapter}.\arabic{table}}
+\renewcommand{\thefigure}{\arabic{chapter}.\arabic{figure}}
+
+% Подрубить плавающие иллюстрации
+\usepackage{graphicx}
+
+% Все рисунки лежат в папке pictures, so можно тырить без указания папки
+\graphicspath{{pictures/}}
+\DeclareGraphicsExtensions{.pdf,.png,.jpg}  % тривиально
+
+% Заменить ": " на ". " в рисунках согласно российским типографским правилам. 
+% Центрировать подпись к таблицам и рисункам. Название таблиц расположить сверху
+% \usepackage[format=plain, labelsep=period, justification=centering, tableposition=top]{caption}  
+\usepackage[format=plain, labelsep=period, tableposition=top]{caption}
+
+% Подрубить крутые пакеты для не менее крутых математических формул
+\usepackage{amssymb,amsfonts,amsmath,amsthm}
+
+% Настройка отступов
+\usepackage[left=3cm,right=1.5cm,top=2cm,bottom=2cm]{geometry}
+
+% Убрать пробел после запятой в формулах
+\usepackage{icomma}
+
+% Подрубить мультиязыковой пакет + настроить формат шрифта (называется последнее иначе)
+\usepackage{polyglossia}
+\setmainlanguage[spelling=modern]{russian}  % spelling=modern все еще под вопросом
+\setotherlanguage{english}
+\setmonofont{Courier New}
+\newfontfamily\cyrillicfonttt{Courier New}         
+\defaultfontfeatures{Ligatures=TeX}         % Ligatures=TeX все еще под вопросом
+\setmainfont{Times New Roman}
+\newfontfamily\cyrillicfont{Times New Roman}
+\setsansfont{Arial}
+\newfontfamily\cyrillicfontsf{Arial}
+
+% Возможно настраивать english избыточно, так как такие символы, вроде \hbar теряют смысл.
+% Что с остальными символами я правда не знаю. Так что просто для напоминания (20.06.2020)
+% \usepackage{polyglossia}
+% \setmainlanguage[spelling=modern]{russian}  % spelling=modern все еще под вопросом
+% \setotherlanguage{english}
+% %\setmonofont{Courier New}
+% \newfontfamily\cyrillicfonttt{Courier New}         
+% \defaultfontfeatures{Ligatures=TeX}         % Ligatures=TeX все еще под вопросом
+% %\setmainfont{Times New Roman}
+% \newfontfamily\cyrillicfont{Times New Roman}
+% %\setsansfont{Arial}
+% \newfontfamily\cyrillicfontsf{Arial}
+
+% Отделять первую строку раздела абзацным отступом, согласно ru правилам
+\usepackage{indentfirst}
+
+% ru правила требуют только французские пробелы
+\frenchspacing
+
+% Настроить оформление списка литературы
+\usepackage[square,numbers]{natbib}
+
+% Впечатать упоминание списка литературы в содержании
+\usepackage[nottoc]{tocbibind}
+
+% Оформить алгоритмы и руссифицировать (прости господи) их
+\usepackage[ruled, linesnumbered, noline]{algorithm2e}
+\SetNlSty{textbf}{}{:}
+\DontPrintSemicolon
+
+\renewcommand{\thealgocf}{}
+\renewcommand{\listalgorithmcfname}{Список алгоритмов}
+\renewcommand{\algorithmcfname}{Алгоритм}
+\renewcommand{\algorithmautorefname}{алгоритм}
+\renewcommand{\algorithmcflinename}{линия}
+%\renewcommand{\algocf@typo}{}%
+%\renewcommand{\@algocf@procname}{Procedure}%
+%\renewcommand{\@algocf@funcname}{Function}%
+\renewcommand{\procedureautorefname}{procedure}%
+\renewcommand{\functionautorefname}{function}%
+%\renewcommand{\algocf@languagechoosen}{english}%
+
+\SetKwHangingKw{KwHData}{Data$\rightarrow$}
+\SetKwInput{KwIn}{Input}%
+\SetKwInput{KwOut}{Output}%
+\SetKwInput{KwData}{Data}%
+\SetKwInput{KwResult}{Result}%
+\SetKw{KwTo}{to}
+\SetKw{KwRet}{return}%
+\SetKw{Return}{return}%
+\SetKwBlock{Begin}{begin}{end}%
+\SetKwRepeat{Repeat}{повторять}{до тех пор, пока}
+
+\SetKwIF{If}{ElseIf}{Else}{if}{then}{else if}{else}{end if}%
+\SetKwSwitch{Switch}{Case}{Other}{switch}{do}{case}{otherwise}{end case}{end switch}%
+\SetKwFor{For}{for}{do}{end for}%
+\SetKwFor{ForPar}{for}{do in parallel}{end forpar}
+\SetKwFor{ForEach}{foreach}{do}{end foreach}%
+\SetKwFor{ForAll}{forall}{do}{end forall}%
+\SetKwFor{While}{while}{do}{end while}%
+
+% Добавить крутую графику
+\usepackage{tikz}  
+\usetikzlibrary{graphs, graphs.standard,matrix}
+
+% Использовать для создания гиперссылок, если понадобиться. Добавлять только в конце!
+\usepackage{hyperref}
+
+% не менять стиль написания ссылок
+\urlstyle{same}

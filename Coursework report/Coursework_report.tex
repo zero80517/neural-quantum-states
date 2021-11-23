@@ -1,0 +1,30 @@
+% Настройки оформления курсовой
+\input{config/preamble}
+
+% эмперический полуторный интервал
+\linespread{1.3} 
+
+\begin{document}
+    
+% Остальные настройки, которые не работают в преамбуле
+\input{config/other}
+
+% Начать нумерацию со второй страницы, т.е. без титульника
+\setcounter{page}{2}
+
+% Содержание курсовой
+\input{content/contents}
+\input{content/introduction}
+\input{content/first_part}
+\input{content/second_part}
+\input{content/conclusion}
+
+% по дефолту
+\bibliographystyle{plainnat}
+\input{content/gostbib}
+
+% Для использования литературы в bibtex
+%\bibliographystyle{ieeetr}
+%\bibliography{content/bibliography}
+    
+\end{document}

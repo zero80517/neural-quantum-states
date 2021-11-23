@@ -1,0 +1,480 @@
+\chapter{Теоретическая часть}
+
+В данной главе рассматриваются основные сведения об ограниченной машине Больцмана, а также методах ее обучения и используемых приближениях при решении квантовой задачи многих тел.
+Также вводятся алгоритмы оптимизации, используемые в практической части для обучения ограниченной машины Больцмана.
+
+\section{Квантовые состояния нейронной сети}
+
+Как было сказано во введении, в данной работе будет рассмотрен подход, предложенный в статье \cite{carleo2017solving}.
+Представим вектор основного состояния спиновой системы следующим образом:
+
+\begin{equation}\label{eq:decomposition}
+|\psi_0 \rangle=\sum_{\mathbf{v}} \psi(\mathbf{v},\mathbf{p})|\mathbf{v} \rangle
+\end{equation}
+
+Состояние будем характеризовать удвоенной проекцией спина на ось z или же вектором-столбцом \textit{состояний стохастических нейронов видимого слоя}:
+
+\[
+\mathbf{v}=
+\begin{pmatrix}
+\sigma_1^z \\
+\sigma_2^z \\
+\vdots     \\
+\sigma_N^z 
+\end{pmatrix}
+\]
+
+В качестве коэффициентов мы возьмем ограниченную машину Больцмана с тем лишь отличием, что вместо квадратов модулей коэффициентов разложения \eqref{eq:decomposition} будем рассматривать сами коэффициенты разложения.
+Тогда данная искуственная нейронная сеть будет представлять соответствующие квантовые состояния спиновой системы, а сам метод такого представления квантовых состояний называют \textit{квантовыми состояниями нейронной сети} (Neural-network Quantum States или NQS).
+Теперь можно явно записать вид коэффициентов вектора основного состояния в нашем методе:
+
+\begin{equation}
+\psi(\mathbf{v},\mathbf{p})=\sum_{\mathbf{h}} e^{-\mathcal{E(\mathbf{v},\mathbf{h},\mathbf{p})}}
+\end{equation}
+
+\noindent где суммирование происходит по всем возможным \textit{состояниям стохастических нейронов скрытого слоя}:
+
+\[
+\mathbf{h}=
+\begin{pmatrix}
+h_1 \\
+h_2 \\
+\vdots     \\
+h_M 
+\end{pmatrix}
+\]
+
+\noindent $\mathcal{E}$ представляет собой \textit{энергию ограниченной машины Больцмана}:
+
+\begin{equation}
+\mathcal{E(\mathbf{v},\mathbf{h},\mathbf{p})}=-\mathbf{a}^\text{T}\mathbf{v}-\mathbf{b}^\text{T}\mathbf{h}-\mathbf{v}^\text{T}\mathbf{W}\mathbf{h}
+\end{equation}
+
+\noindent а $\mathbf{p}$ представляют собой параметры ограниченной машины Больцмана:
+
+\begin{equation*}
+\mathbf{p}=\{\mathbf{a},\mathbf{b},\mathbf{W}\}\\
+\end{equation*}
+
+\noindent где:
+\begin{equation*}    
+\begin{split}
+\mathbf{a}&\text{~--- вектор-столбец \textit{видимых смещений} сети}\\
+\mathbf{b}&\text{~--- вектор-столбец \textit{скрытых смещений} сети}\\
+\mathbf{W}&\text{~--- матрица \textit{весов} сети}
+\end{split}
+\end{equation*}
+
+Таким образом, энергия системы становится многомерной функцией параметров ограниченной машины Больцмана:
+
+\begin{equation*}
+E=E(\mathbf{p})
+\end{equation*}
+
+Метод квантовых состояний нейронной сети схематически изображен на 
+рис.~\ref{fig:nqs}.
+ 
+{
+    \begin{figure}[b!]
+        \def\layersep{3.5cm}
+        \begin{center}
+            \begin{tikzpicture}[node distance=\layersep]
+            \tikzstyle{neuron}=[circle,draw=black!100,minimum size=1cm,inner sep=0pt]
+            \tikzstyle{visible neuron}=[neuron, fill=yellow!50];
+            \tikzstyle{hidden neuron}=[neuron, fill=green!50];
+            \tikzstyle{annot} = [text centered]
+            
+            % Draw the input layer nodes
+            
+            \foreach \name / \y in {1/1.5,2/3,3/4.5,4/6,N/9}
+            \node[visible neuron] (V-\name) at (0,-\y) {$\sigma_{\name}^z$};
+            \node[neuron,draw=none] (V-dots) at (0,-7.5) {\vdots};
+            
+            % Draw the hidden layer nodes
+            \foreach \name / \y in {1/1.5,2/3,3/4.5,4/6,5/7.5,M/10.5}
+            \path[yshift=0.5cm] node[hidden neuron] (H-\name) at (\layersep,-\y cm) {$h_{\name}$};
+            \path[yshift=0.5cm] node[neuron,draw=none] (H-dots) at (\layersep,-9 cm) {\vdots};
+            
+            % Connect every node in the input layer with every node in the
+            % hidden layer.
+            
+            \foreach \source in {1,2,3,4,N}
+            \foreach \dest in {1,...,5}
+            \path (V-\source) edge (H-\dest);
+            \foreach \dest in {1,2,3,4,5,M}
+            \path (V-N) edge (H-\dest);
+            \foreach \source in {1,...,4}
+            \path (V-\source) edge (H-M);
+            % Annotate the layers
+            \node[annot,above of=H-1, node distance=1.5cm] (hl) {Скрытый слой};
+            \node[annot,left of=hl] {Видимый слой};
+            \node (I-1) at (-\layersep, -5) {$ 
+                \mathbf{v}=
+                \begin{pmatrix}
+                \sigma_1^z \\
+                \sigma_2^z \\
+                \vdots     \\
+                \sigma_N^z 
+                \end{pmatrix}
+                $};
+            \draw[->] (I-1) -- +(2.5,0);
+            \node (O-1) at (\layersep+\layersep-0.5cm, -5) {$ 
+                \psi(\mathbf{v},\mathbf{p})
+                $};
+            \draw[->] (\layersep+1cm, -5) -- (O-1);
+            \end{tikzpicture}
+        \end{center}
+        \caption{Схематическое изображение метода квантовых состояний нейронной сети.
+                 Ограниченная машина Больцмана, изображенная на рисунке, представляет собой волновую функцию системы спинов.
+                 По данному на вход квантовому состоянию системы спинов искусственная нейронная сеть будет возвращать значение волновой функции системы в данном состоянии.    
+        }
+        \label{fig:nqs}
+    \end{figure}
+}
+
+Из вариационного принципа Ритца следует, что энергия основного состояния $E_0$ является минимумом функционала энергии системы спинов:
+
+\begin{equation*}    
+E\geqslant E_0
+\end{equation*}
+
+Следовательно, в терминах машинного обучения задачу по нахождению вектора основного состояния 
+можно представить в виде задачи по нахождению таких параметров $ \mathbf{p}_0 $ ограниченной машины Больцмана, при которой энергия системы становится минимальной. Энергия системы принимается за \textit{целевую функцию}, минимум которой требуется найти:
+
+\begin{equation}\label{eq:argmin}  
+\mathbf{p}_0=\arg\min_{\mathbf{p}}E(\mathbf{p})
+\end{equation}
+
+Из теоремы Колмогорова-Арнольда не известно, какое количество параметров надо использовать для точной аппроксимации многомерной функции.
+От числа скрытых стохастических нейронов зависит точность аппроксимации основного вектора состояния системы спинов.
+Принято говорить не о числе скрытых нейронов, а об их \textit{плотности}:
+
+\[
+\rho=\frac{M}{N}
+\]
+
+В данной работе используется $\rho=2$, что достаточно для получения допустимой точности для классических гамильтонианов, рассмотренных в дальнейшем.
+
+\section{Вариационный метод Монте-Карло}
+
+Как было упомянуто во введении, рассматривать полное гильбертово пространство системы достаточно большого числа спинов не представляется возможным с вычислительной точки зрения.
+Тогда имеет смысл ограничиться частью гильбертова пространства для решения уравнения \eqref{eq:argmin}.
+В качестве метода решения применим \textit{вариационный метод Монте-Карло} (Variational Monte-Carlo или VMC) \cite{mcmillan1965ground}.
+Для начала перепишем, как вычисляется значение энергии в произвольном состоянии, следующим образом:
+
+\begin{multline}\label{eq:expectenergy}
+E[\psi]=\frac{\langle \psi | \hat{\mathcal{H}} | \psi \rangle}{\langle \psi | \psi \rangle}
+=\sum_{\mathbf{v}, \mathbf{v}'} \frac{\langle \psi |\mathbf{v} \rangle \langle \mathbf{v}|\hat{\mathcal{H}}| \mathbf{v}'\rangle \langle\mathbf{v}'|\psi \rangle}{\langle \psi | \psi \rangle}=\\
+=\sum_{\mathbf{v}}\frac{|\psi(\mathbf{v})|^2}{\langle \psi | \psi \rangle}\sum_{\mathbf{v}'}\mathcal{H}_{\mathbf{v},\mathbf{v}'}\frac{\psi(\mathbf{v}')}{\psi(\mathbf{v})}=
+\mathbb{E}[E_{\text{лок}}]
+\end{multline}
+
+\noindent где:
+
+\begin{equation}
+E_{\text{лок}}(\mathbf{v})=\sum_{\mathbf{v}'}\mathcal{H}_{\mathbf{v},\mathbf{v}'}\frac{\psi(\mathbf{v}')}{\psi(\mathbf{v})}
+\end{equation}
+
+Вариационный метод Монте-Карло состоит в приближенном вычислении энергии основного состояния посредством генерации выборки Монте-Карло.
+Выборка Монте-Карло должна быть такой, чтобы несмотря на потерю множества членов в вычислении математического ожидания $\mathbb{E}[E_{\text{лок}}]$ в \eqref{eq:expectenergy}, можно было с достаточной точностью вычислять значение энергии системы спинов.
+Обозначив выборку Монте-Карло как:
+
+\[
+\mathbf{V}=\{\mathbf{v}_1,\mathbf{v}_2,\dots\}
+\]
+
+\noindent вариационный метод Монте-Карло будет заключаться в следующем:
+
+\begin{equation}\label{eq:VMC}
+E=\mathbb{E}[E_{\text{лок}}]\approx\langle E_{\text{лок}}\rangle_{\mathbf{v}\in \mathbf{V}}
+\end{equation}
+
+В качестве алгоритма, по которому будем генерировать выборку Монте-Карло, будем использовать \textit{алгоритм Метрополиса-Гастингса}, суть которого продемонстрирована на рис.~\ref{fig:MH}.
+
+{
+    \begin{figure}[b!]
+        \begin{center}
+            \begin{tikzpicture}[]
+            \node (enter-1) at (-1, 0) {$
+                \mathbf{v}_{i}
+            $};
+            \node[rectangle,draw=black!100,inner sep=0.2cm,fill=green!50] (enter-2) at (0, -2) {$
+                \begin{matrix}
+                \text{Выбрать}\\
+                \tilde{\mathbf{v}}_{i}
+                \end{matrix}
+            $};
+            \node[rectangle,draw=black!100,inner sep=0.2cm,fill=orange!50] (int-1) at (3, 0) {$
+                \psi(\mathbf{v}_i,\mathbf{p})
+            $};
+            \node[rectangle,draw=black!100,inner sep=0.2cm,fill=orange!50] (int-2) at (3, -2) {$
+                \psi(\tilde{\mathbf{v}}_{i},\mathbf{p})
+            $};
+            \node[rectangle,draw=black!100,inner sep=0.2cm,fill=green!50] (ifelse) at (9, -1) {$
+                \begin{matrix}
+                u \sim \text{Uniform}(0,1)\\
+                \mathbf{v}_{i+1} =
+                \begin{cases}
+                \tilde{\mathbf{v}}_i, & \text{если $u<\left|\frac{\psi(\tilde{\mathbf{v}}_i,\mathbf{p})}{\psi(\mathbf{v}_i,\mathbf{p})}\right|^2$} \\
+                \mathbf{v}_{i}, & \text{в противном случае}
+                \end{cases}
+                \end{matrix}
+            $};
+            \node (out) at (15, -1) {$
+                \mathbf{v}_{i+1}
+            $};
+            \draw[->] (enter-1) -- (int-1);
+            \draw[->] (enter-2) -- (int-2);
+            \draw[->] (0, 0) -- (enter-2);
+            \draw[->] (ifelse) -- (out);
+            \draw[->] (int-1) -- +(2.15,0);
+            \draw[->] (int-2) -- +(2.15,0);
+            \end{tikzpicture}
+        \end{center}
+        \caption{Схематическое изображение одного шага в алгоритме Метрополиса-Гастингса. 
+                 Суть этого алгоритма состоит в вычленении из \eqref{eq:expectenergy} членов, вносящих наибольший вклад.
+                 В качестве меры вклада берется квадрат модуля волновой функции.
+                 Из случайно выбранного состояния $ \mathbf{v}_i $ выбираем новое состояние $ \tilde{\mathbf{v}}_i $, посредством переворота одного или нескольких спинов.
+                 Если квадрат модуля нового состояния больше исходного, то определенно заносим данное состояние в выборку Монте-Карло.
+                 Если же квадрат модуля нового состояния меньше исходного, то заносим данное состояние в выборку Монте-Карло лишь с определенной вероятностью, 
+                 равной отношению квадратов модулей нового и исходного состояния.
+        }
+        \label{fig:MH}
+    \end{figure}
+}
+
+Дополнительно был использован алгоритм \textit{термализации}, когда на каждой итерации в обучении NQS из выбранного состояния производилось определенное количество шагов, дабы сделать первое состояние случайным.
+В данной работе производилось $1000N$ дополнительных шагов перед началом генерации выборки Монте-Карло.
+Также производилось дополнительно $ N $ шагов для каждого элемента выборки, дабы сделать два состояния в выборке более независимыми.
+В данной работе размер выборки составлял 10000. 
+
+В итоге получилось, что на создание выборки Монте-Карло необходимо $11000N$ шагов. 
+Данную выборку необходимо создавать на каждой итерации обучения.
+Данная часть была написана на языке программирования C++, для наибыстрейшей генерации.
+
+В данной работе также используется  \textit{блочный анализ} (binning analysis) с целью проверки ошибки вычисления значения энергии, изложенный в статье \cite{ambegaokar2010estimating}. 
+Вычисление ошибки использовалась для проверки надежности метода оценки величины энергии системы спинов.
+Методы оптимизации, изложенные ниже, допускают осцилляцию энергии по ходу обучения.
+В ходе обучения эта осцилляция вносила несколько б\'{о}льший вклад, нежели ошибка в вычислении энергии, поэтому последняя величина в дальнейшем опускается.
+
+\section{Используемые алгоритмы оптимизации}
+
+Теперь необходимо определиться с методом оптимизации параметров ограниченной машины Больцмана. Самым распространенным методом минимизации целевой функции в машинном обучении является метод \textit{градиентного спуска} (Gradient Descent или GD). Для демонстрации метода рассмотрим одномерный случай:
+
+\begin{equation*}    
+p_t=p_{t-1}-\alpha \frac{dE}{dp}
+\end{equation*}
+
+\noindent где:
+\begin{equation*}    
+\begin{split}
+t&\text{~--- шаг обучения}\\
+\alpha&\text{~--- \textit{скорость обучения}}\\
+\end{split}
+\end{equation*}
+
+Если изменять параметр таким образом, то целевая функция будет уменьшаться:
+\begin{equation*}
+E(p_t)\approx E(p_{t-1}) - \alpha \left(\frac{dE}{dp}\right)^2 < E(p_{t-1})
+\end{equation*}
+
+Таким образом достижение минимума целевой функции можно осуществить, меняя параметры следующим образом:
+
+\begin{equation}
+\mathbf{p}_t =\mathbf{p}_{t-1} - \alpha\nabla_{\mathbf{p}} E(\mathbf{p}_{t-1})
+\end{equation}
+
+Но данный метод останавливается в локальных минимумах, так как там градиент становится равным нулю.
+К тому же в некоторых случаях целевую функцию вычислить точно не удается, тем более ее градиент. 
+Поэтому появилось множество модификаций метода градиентного спуска. Самым простым является так называемый метод \textit{стохастического градиентного спуска} (Stochastic Gradient Descent или SGD) \cite{harju1997stochastic}. Суть его состоит в том, что целевая функция изменяется таким образом, чтобы представить ее в виде \eqref{eq:VMC}, и брать градиент  от новой целевой функции.
+
+Вычислим значение градиента от исходной целевой функции. Для этого введем:
+
+\begin{equation*}
+\mathbf{D}_{\mathbf{p}}(\mathbf{v})=\frac{\nabla_{\mathbf{p}}\psi(\mathbf{v},\mathbf{p})}{\psi(\mathbf{v},\mathbf{p})}
+\end{equation*}
+
+Тогда:
+\begin{multline*}
+\nabla_{\mathbf{p}}E(\mathbf{p})
+=\nabla_{\mathbf{p}}\frac{\langle \psi | \hat{\mathcal{H}} | \psi \rangle}{\langle \psi | \psi \rangle}
+=\nabla_{\mathbf{p}}\sum_{\mathbf{v}, \mathbf{v}'} \frac{\psi^*(\mathbf{v},\mathbf{p})\mathcal{H}_{\mathbf{v},\mathbf{v}'}\psi(\mathbf{v}',\mathbf{p})}{\langle \psi | \psi \rangle}=\\
+=\sum_{\mathbf{v}, \mathbf{v}'} \frac{\mathbf{D}^*_{\mathbf{p}}(\mathbf{v}) \psi^*(\mathbf{v},\mathbf{p}) \mathcal{H}_{\mathbf{v},\mathbf{v}'} \psi(\mathbf{v}',\mathbf{p})}{\langle \psi | \psi \rangle}+
+\sum_{\mathbf{v}, \mathbf{v}'} \frac{\psi^*(\mathbf{v},\mathbf{p}) \mathcal{H}_{\mathbf{v},\mathbf{v}'} \mathbf{D}_{\mathbf{p}}(\mathbf{v}')  \psi(\mathbf{v}',\mathbf{p})}{\langle \psi | \psi \rangle}+\\
++\sum_{\mathbf{v}, \mathbf{v}'} \frac{\psi^*(\mathbf{v},\mathbf{p})\mathcal{H}_{\mathbf{v},\mathbf{v}'}\psi(\mathbf{v}',\mathbf{p})}{\langle \psi | \psi \rangle}
+\sum_{\mathbf{v}} \frac{|\psi(\mathbf{v},\mathbf{p})|^2  (\mathbf{D}^*_{\mathbf{p}}(\mathbf{v}) +  \mathbf{D}_{\mathbf{p}}(\mathbf{v}))}{\langle \psi | \psi \rangle}=\\
+=\sum_{\mathbf{v}}\frac{|\psi(\mathbf{v},\mathbf{p})|^2}{\langle \psi | \psi \rangle} \mathbf{D}^*_{\mathbf{p}}(\mathbf{v})\sum_{\mathbf{v}'} \mathcal{H}_{\mathbf{v},\mathbf{v}'} \frac{\psi(\mathbf{v}',\mathbf{p})}{\psi(\mathbf{v},\mathbf{p})}+\\
++\sum_{\mathbf{v}'}\frac{|\psi(\mathbf{v}',\mathbf{p})|^2}{\langle \psi | \psi \rangle} \mathbf{D}_{\mathbf{p}}(\mathbf{v}')\sum_{\mathbf{v}} \mathcal{H}^*_{\mathbf{v}',\mathbf{v}} \frac{\psi^*(\mathbf{v},\mathbf{p})}{\psi^*(\mathbf{v}',\mathbf{p})}+
+2E\mathop{\text{Re}}(\mathbb{E}[\mathbf{D}_{\mathbf{p}}])=\\
+=2\mathop{\text{Re}}(\mathbb{E}[E_{\text{лок}}\mathbf{D}_{\mathbf{p}}]) + 2E\mathop{\text{Re}}(\mathbb{E}[\mathbf{D}_{\mathbf{p}}])
+\end{multline*}
+
+Таким образом для градиента получаем:
+\begin{equation}
+\nabla_{\mathbf{p}}E(\mathbf{p})=2\mathop{\text{Re}}(\mathbb{E}[E_{\text{лок}}\mathbf{D}_{\mathbf{p}}] + E\mathbb{E}[\mathbf{D}_{\mathbf{p}}])
+\end{equation}
+
+А для стохастического градиента:
+\begin{equation}
+\nabla_{\mathbf{p}}E(\mathbf{V},\mathbf{p})=
+2\mathop{\text{Re}}\Bigl(\bigl\langle (E_{\text{лок}} + \langle E_{\text{лок}}\rangle_{\mathbf{v}\in \mathbf{V}}) \mathbf{D}_{\mathbf{p}} \bigr\rangle_{\mathbf{v}\in \mathbf{V}}\Bigr)
+\end{equation}
+
+Так как в некоторых случаях размерность гильбертова пространства будет достаточно большой, то рассматривать будем именно стохастический градиентный спуск и его модификации.
+
+Важной модификацией является использование так называемого метода \textit{стохастических реконфигураций} \cite{sorella2007weak}. 
+Суть его состоит в дополнении стохастического градиента матрицей стохастической реконфигурации:
+
+\begin{equation}
+\mathbf{S}=\langle \mathbf{D}^*_{\mathbf{p}} \otimes \mathbf{D}_{\mathbf{p}}^{\text{T}}\rangle_{\mathbf{v}\in \mathbf{V}}-
+\langle \mathbf{D}^*_{\mathbf{p}} \rangle_{\mathbf{v}\in \mathbf{V}} \otimes \langle \mathbf{D}_{\mathbf{p}}^{\text{T}}\rangle_{\mathbf{v}\in \mathbf{V}}
+\end{equation}
+
+\noindent следующим образом:
+\begin{equation}
+\mathbf{p}_t =\mathbf{p}_{t-1} - \alpha\mathbf{S}^{-1}\nabla_{\mathbf{p}} E(\mathbf{V}, \mathbf{p}_{t-1})
+\end{equation}
+
+Если матрица стохастической реконфигурации не может быть обратима, то под $\mathbf{S}^{-1}$ может подразумеваться псевдообращение Мура-Пенроуза.
+В ходе данной работы было замечено, что псевдообращение работает не эффективно.
+Так, помимо увеличения времени обучения, осцилляции энергии по ходу обучения значительно увеличиваются.
+Поэтому в данной работе используется явная регуляризация, описанная в статье \cite{sorella2007weak}:
+
+\begin{equation}
+\mathbf{S}^{\text{reg}} =\mathbf{S} + \epsilon(t)\mathbf{I}
+\end{equation}
+
+\noindent где согласно статье \cite{carleo2017solving} вид $\epsilon(t)$ выбран следующим образом:
+
+\begin{equation}
+\epsilon(t) = \max(\epsilon_0 b^t, \epsilon_{\text{min}})
+\end{equation}
+
+Значение скорости обучения $\alpha$ влияет на сходимость метода и поэтому является одним из главных параметров.
+Для каждого исследуемого гамильтониана значение $\alpha$ принималось за 0,01 и менялось, в зависимости от результатов обучения для получения устойчивого значения энергии.
+В общем случае значение  $\alpha$ зависит от шага обучения и, согласно \cite{harju1997stochastic}, должно удовлетворять следующим требованиям:
+
+\[
+\sum_{t}\alpha_t^2<\sum_{t}\alpha_t=\infty
+\]
+
+В данной же работе  $\alpha$ принимается постоянной, дабы не попасть в локальный минимум. 
+Конечно, это может привести к известной проблеме \textit{переобучения}, когда некоторые параметры искусственной нейронной сети неограниченно растут. 
+Благо есть множество методов борьбы с данным явлением, одним из которых является метод $\text{L}_2$ \textit{регуляризации}.
+
+Метод $\text{L}_2$ регуляризации используется в данной работе для борьбы с переобучением NQS. 
+Суть этого метода состоит в добавлении к целевой функции добавки, которая характеризует размах весов искусственной нейронной сети.
+Уменьшая таким образом значения весов, можно добиться устойчивого обучения сети.
+Таким образом, мы будем минимизировать следующую функцию:
+
+\begin{equation}
+L = E + \frac{\lambda}{2}||\mathbf{p}||^2
+\end{equation}
+
+Тогда новый градиент будет выглядеть следующим образом:
+
+\begin{equation}
+\nabla_{\mathbf{p}}L = \nabla_{\mathbf{p}}E + \lambda\mathbf{p}
+\end{equation}
+
+В ходе работы значение параметра $\lambda$, согласно \cite{hinton2012practical}, было принято за 0,0001. 
+В ходе работы было замечено, что увеличение данного параметра, при постоянном значении скорости обучения, ведет к увеличению осцилляции значения энергии по ходу обучения.
+Поэтому, данный параметр не меняет свое значение в данной работе.
+
+Таким образом, одним из алгоритмов минимизации, использованных в данной работе, является SGD:
+
+\begin{algorithm}[H]
+    \renewcommand{\algorithmcfname}{SGD}
+    \textbf{задать} значение параметра скорости обучения $\alpha\in\mathbb{R}$, значения параметров регуляризации $\epsilon_0\in\mathbb{R}$, $b\in\mathbb{R}$, $\epsilon_{\min}\in\mathbb{R}$,  $\text{L}_2$ регуляризационный множитель $\lambda=10^{-4}$\\
+    \textbf{инициализировать} начальный шаг итерации $t \leftarrow 0$, случайным образом вектор параметров $\mathbf{p}_{t=0}\in\mathbb{C}^n$\\
+    \Repeat{не пройдет достаточное число итераций}{
+        $t\leftarrow t+1$\\
+        $\nabla_{\mathbf{p}} E(\mathbf{V}, \mathbf{p}_{t-1}) \leftarrow \text{Выборка Монте-Карло}$\\
+        $\mathbf{g}_{t} \leftarrow \mathbf{S}^{-1}(\nabla_{\mathbf{p}}E(\mathbf{V}, \mathbf{p}_{t-1}) + \lambda\mathbf{p}_{t-1})$\\
+        $\mathbf{p}_t \leftarrow \mathbf{p}_{t-1} - \alpha\mathbf{g}_{t}$\\
+    }
+    \caption{стохастический градиентный спуск с методом стохастической реконфигурации и с $\text{L}_2$ регуляризацией}
+\end{algorithm}
+
+Естественно, для проверки надежности подхода, одним методом минимизации целевой функции ограничиться нельзя.
+Поэтому мы рассмотрим одну из простейших, но часто используемых модификаций стохастического градиентного спуска, под названием \textit{стохастический градиентный спуск с моментом} (Momentum) \cite{qian1999momentum}.
+Суть данного метода состоит в том, чтобы избежать попадания искусственной нейронной сети по ходу обучения в локальный минимум, накапливая градиент по ходу обучения.
+Тем самым, попав в локальный минимум, у сети будет шанс выскочить из нее, обладая большим накопленным градиентом.
+Правило изменения параметров NQS будет выглядеть следующим образом:
+
+\begin{gather*}
+\mathbf{m}_{t} = \beta_1 \mathbf{m}_{t-1} + \alpha\nabla_{\mathbf{p}}L(\mathbf{p}_{t-1}) \\
+\mathbf{p}_t = \mathbf{p}_{t-1} - \mathbf{m}_{t}
+\end{gather*}
+
+\noindent где:
+
+\begin{equation*}    
+\begin{split}
+\beta_1&\text{~--- \textit{множитель первого момента}}\\
+\mathbf{m}&\text{~--- \textit{вектор первого момента}}\\
+\end{split}
+\end{equation*}
+
+Для ограниченной машины Больцмана типичным значением $ \beta_1 $ будет 0,9 \cite{hinton2012practical}. В качестве начального значения вектора первого момента принимается нуль-вектор. 
+Таким образом, алгоритм оптимизации Momentum будет выглядеть следующим образом:
+
+\begin{algorithm}[H]
+    \renewcommand{\algorithmcfname}{Momentum}
+    \textbf{задать} значение параметра скорости обучения $\alpha\in\mathbb{R}$, множителя первого момента  $\beta_1=0,9$ и $\text{L}_2$ регуляризационного множителя $\lambda=10^{-4}$\\
+    \textbf{инициализировать} начальный шаг итерации $t \leftarrow 0$, случайным образом вектор параметров $\mathbf{p}_{t=0}\in\mathbb{C}^n$ и значение вектора первого момента $\mathbf{m}_{t=0} \leftarrow \mathbf{0}$ \\
+    \Repeat{не пройдет достаточное число итераций}{
+        $t\leftarrow t+1$\\
+        $\nabla_{\mathbf{p}} E(\mathbf{V}, \mathbf{p}_{t-1}) \leftarrow \text{Выборка Монте-Карло}$\\
+        $\mathbf{g}_{t} \leftarrow  \nabla_{\mathbf{p}}E(\mathbf{V}, \mathbf{p}_{t-1}) + \lambda\mathbf{p}_{t-1}$\\
+        $\mathbf{m}_{t} \leftarrow \beta_1 \mathbf{m}_{t-1} + \alpha\mathbf{g}_{t}$\\
+        $\mathbf{p}_t \leftarrow \mathbf{p}_{t-1} - \mathbf{m}_{t}$\\
+    }
+    \caption{стохастический градиентный спуск с моментом и с $\text{L}_2$ регуляризацией}
+\end{algorithm}
+
+Так как мы изначально задались целью избежать застревания в локальном минимуме фиксированием скорости обучения, необходимо также рассмотреть алгоритм минимизации, который бы по ходу обучения сам выбирал ее скорость.
+Недавно был представлен метод \textit{адаптивной оценки момента} (Adaptive Moment Estimation или Adam) \cite{kingma2014adam}.
+Он явился синтезом других методов адаптивной скорости обучения AdaGrad и RMSProp \cite{duchi2011adaptive, tieleman2012lecture}.
+Суть метода состоит, помимо хранения значений предыдущих градиентов, в хранении квадратов градиентов (то есть поэлементное произведение коэффициентов градиента).
+Теперь правило изменения параметров NQS будет выглядеть следующим образом:
+
+\begin{gather*}
+\mathbf{m}_{t} = \beta_1 \mathbf{m}_{t-1} + (1-\beta_1)\nabla_{\mathbf{p}}L(\mathbf{p}_{t-1}) \\
+\mathbf{v}_{t} = \beta_2 \mathbf{v}_{t-1} + (1-\beta_2)\nabla_{\mathbf{p}}L(\mathbf{p}_{t-1})^2
+\end{gather*}
+
+\begin{gather*}
+\tilde{\mathbf{m}}_{t} = \mathbf{m}_{t}/(1-\beta_1^t) \\ 
+\tilde{\mathbf{v}}_{t} = \mathbf{v}_{t}/(1-\beta_2^t) \\
+\mathbf{p}_t = \mathbf{p}_{t-1} - \alpha\tilde{\mathbf{m}}_{t}/(\sqrt{\tilde{\mathbf{v}}_{t}}+\epsilon)
+\end{gather*}
+
+\noindent где:
+
+\begin{gather*}  
+\beta_2\text{~--- \textit{множитель второго момента}}\\
+\mathbf{v}\text{~--- \textit{вектор второго момента}}\\
+\epsilon\text{~--- малый параметр, делающий ненулевым значение в знаменателе}
+\end{gather*}
+
+В качестве значения множителя второго момента и малого параметра принимаются значения, рекомендуемые в статье \cite{kingma2014adam}. 
+В качестве начального значения вектора второго момента также принимается нуль-вектор. 
+Таким образом, алгоритм оптимизации Adam будет выглядеть следующим образом:
+
+\begin{algorithm}[H]
+    \renewcommand{\algorithmcfname}{Adam}
+    \textbf{задать} значение параметра скорости обучения $\alpha\in\mathbb{R}$, множителя первого момента  $\beta_1=0,9$, множителя второго момента  $\beta_2=0,999$, параметра возмущения $\epsilon$, $\text{L}_2$ регуляризационного множителя $\lambda=10^{-4}$\\
+    \textbf{инициализировать} начальный шаг итерации $t \leftarrow 0$, случайным образом вектор параметров $\mathbf{p}_{t=0}\in\mathbb{C}^n$, значение вектора первого момента $\mathbf{m}_{t=0} \leftarrow \mathbf{0}$ и вектора второго момента $\mathbf{v}_{t=0} \leftarrow \mathbf{0}$ \\
+    \Repeat{не пройдет достаточное число итераций}{
+        $t\leftarrow t+1$\\
+        $\nabla_{\mathbf{p}} E(\mathbf{V}, \mathbf{p}_{t-1}) \leftarrow \text{Выборка Монте-Карло}$\\
+        $\mathbf{g}_{t} \leftarrow  \nabla_{\mathbf{p}}E(\mathbf{V}, \mathbf{p}_{t-1}) + \lambda\mathbf{p}_{t-1}$\\
+        $\mathbf{m}_{t} \leftarrow \beta_1 \mathbf{m}_{t} + (1-\beta_1)\mathbf{g}_{t}$\\
+        $\mathbf{v}_{t} \leftarrow \beta_2 \mathbf{v}_{t-1} + (1-\beta_2)\mathbf{g}^2_{t}$\\
+        $\tilde{\mathbf{m}}_{t} \leftarrow \mathbf{m}_{t}/(1-\beta_1^t)$\\
+        $\tilde{\mathbf{v}}_{t} \leftarrow \mathbf{v}_{t}/(1-\beta_2^t)$\\
+        $\mathbf{p}_t \leftarrow \mathbf{p}_{t-1} - \alpha\tilde{\mathbf{m}}_{t}/(\sqrt{\tilde{\mathbf{v}}_{t}}+\epsilon)$\\
+    }
+    \caption{адаптивная оценка момента с $\text{L}_2$ регуляризацией}
+\end{algorithm}

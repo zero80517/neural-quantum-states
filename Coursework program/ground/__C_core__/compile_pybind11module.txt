@@ -1,0 +1,7 @@
+- python:
+conda activate; c++ -O3 -Wall -shared -std=c++17 -fPIC `python3 -m pybind11 --includes` src/random.h src/random.cpp src/nqs.h src/nqs.cpp src/ising_1d_symmetric.h src/ising_1d_symmetric.cpp src/v15_isotropic.h src/v15_isotropic.cpp src/metropolis_hastings.h src/metropolis_hastings.cpp pybind11module.cpp -o pybind11module`python3-config --extension-suffix`; python3 test.py
+
+- Google CoLab:
+!pip install pybind11
+!c++ -O3 -Wall -shared -std=c++17 -fPIC `python3 -m pybind11 --includes` src/random.h src/random.cpp src/nqs.h src/nqs.cpp src/ising_1d_symmetric.h src/ising_1d_symmetric.cpp src/v15_isotropic.h src/v15_isotropic.cpp src/heisenberg_1d_symmetric.h src/heisenberg_1d_symmetric.cpp src/metropolis_hastings.h src/metropolis_hastings.cpp pybind11module.cpp -o pybind11module`python3-config --extension-suffix` 
+!python3 test.py
